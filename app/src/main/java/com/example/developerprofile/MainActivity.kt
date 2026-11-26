@@ -560,3 +560,33 @@ fun ProfileScreenLightPreview() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "Profil - Thème sombre"
+)
+@Composable
+fun ProfileScreenDarkPreview() {
+    DeveloperProfileTheme(darkTheme = true) {
+        ProfileScreen(
+            profile = sampleProfile(),
+            onContactClick = {},
+            onPortfolioClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "Profil junior disponible - Thème clair"
+)
+@Composable
+fun JuniorProfilePreview() {
+    DeveloperProfileTheme(darkTheme = false) {
+        ProfileScreen(
+            profile = sampleJuniorProfile(),
+            onContactClick = {},
+            onPortfolioClick = {}
+        )
+    }
+}
