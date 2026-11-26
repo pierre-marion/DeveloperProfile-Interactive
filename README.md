@@ -1,57 +1,55 @@
-# Profil développeur - Jetpack Compose
+# Profil développeur – version améliorée
 
-## Présentation
+Application Android en Jetpack Compose qui affiche mon profil de développeur.
 
-Pour ce devoir, j'ai créé une application Android qui affiche une fiche de profil développeur avec Jetpack Compose et Kotlin.
+> Projet réalisé avec l'aide d'une IA (Claude), dans le cadre d'un exercice d'entraînement.
 
-On retrouve le nom, le métier, une petite présentation, les compétences et la situation actuelle. J'ai aussi ajouté un bouton pour le portfolio.
+## Description
 
-J'ai fait deux profils différents pour tester la réutilisation des composants.
+C'est la suite de ma première fiche « Profil développeur » (autre dépôt). J'ai repris l'appli pour la rendre plus complète et plus propre avec ce qu'on a vu dans le chapitre Compose UI.
 
-## Technologies et notions utilisées
+L'écran affiche mon nom et mon rôle avec un avatar, une description, mes compétences, quelques projets et une zone de contact avec un bouton « Contacter ». Les données sont écrites directement dans le code (`sampleProfile()`), il n'y a pas d'API ni de base de données.
 
-- Kotlin et Jetpack Compose
-- Composables et paramètres
-- Modifier et padding
-- Column, Surface, Text et Button
-- Callbacks
-- Previews
-- Accessibilité
+## Capture d'écran
 
-## Explications
+![Capture de l'application](screenshot.png)
 
-**1. Quels composables avez-vous créés ?**
+## Composants utilisés
 
-J'ai créé plusieurs composables : ProfileScreen, ProfileCard, ProfileHeader, ProfileDescription, SkillsSection, SkillItem, ProfileAvailability et ProfileAction.
+- `Text` : nom, rôle, titres, descriptions
+- `Button` : bouton « Contacter »
+- `Icon` : icônes des projets et de la zone contact
+- `Image` : avatar (image placeholder découpée en cercle)
+- `Card` : bloc « À propos » et cartes des projets
+- `OutlinedTextField` en lecture seule : affichage de l'email
+- `Surface` : badge de dispo, pastilles de compétences, zone contact
 
-**2. Quel composable représente l'écran principal ?**
+## Layouts utilisés
 
-C'est ProfileScreen. Il contient les informations du profil et les passe à ProfileCard.
+- `Column` pour empiler les éléments à l'intérieur des cartes
+- `Row` pour mettre l'avatar à côté du nom, et pour les lignes d'infos du contact
+- `Box` pour poser le badge « En poste / Dispo » sur l'avatar
+- `Spacer` pour les espaces
+- `Surface` pour la zone de contact
 
-**3. Où utilisez-vous un padding externe ?**
+## Les listes
 
-Dans ProfileScreen, avec un padding de 24.dp pour laisser de l'espace entre la fiche et les bords de l'écran.
+Tout l'écran est une `LazyColumn` (`ProfileScreen`). Les blocs uniques (en-tête, description, contact) sont ajoutés avec `item`, et les projets avec `items(profile.projects, key = { it.id })`. Chaque projet est affiché par le composable `ProjectCard`.
 
-**4. Où utilisez-vous un padding interne ?**
+Les compétences sont dans une `LazyRow` (`SkillsSection`), qui défile horizontalement. Chaque compétence est affichée avec `SkillChip`.
 
-Dans ProfileCard, avec un padding de 20.dp pour éviter que le texte soit collé aux bords de la fiche.
+## Le thème
 
-**5. Quel composant reçoit un callback ?**
+J'ai choisi une couleur violette. Le thème est dans `Theme.kt` et `Type.kt` :
 
-ProfileAction reçoit onActionClick pour gérer le clic sur le bouton. ProfileCard reçoit aussi onProfileClick.
+- deux palettes : violet foncé sur fond clair en mode clair, violet clair sur fond sombre en mode sombre, pour que ça reste lisible
+- j'ai enlevé les couleurs dynamiques (Material You) pour que l'appli garde toujours le violet
+- une typo perso (`ProfileTypography`) : nom en gros et en gras, titres de section un peu plus petits, texte normal pour le reste
+- des formes arrondies (`ProfileShapes`) utilisées pour les cartes, les pastilles et le badge
+- les composants utilisent seulement `MaterialTheme.colorScheme`, donc tout change tout seul entre le mode clair et le mode sombre
 
-Pour le moment, les clics ne font rien, comme demandé dans le devoir.
+Il y a 3 previews : thème clair, thème sombre, et un deuxième profil (développeur Android junior disponible pour un stage).
 
-**6. Quelle information d'accessibilité avez-vous ajoutée ?**
+## Quelles notions du chapitre Compose UI ai-je réutilisées ?
 
-J'ai utilisé Role.Button et contentDescription pour indiquer que la fiche est cliquable et expliquer son action.
-
-**7. Pourquoi vos composants sont-ils réutilisables ?**
-
-Parce qu'ils utilisent des paramètres. Je peux donc changer le nom, les compétences ou la description sans devoir refaire les composants.
-
-## Aperçu
-
-J'ai créé deux previews : une avec mon profil de développeur full-stack et une autre avec un profil de développeur Android junior.
-
-![img.png](img.png)
+Les composants de base (Text, Button, Icon, Image, Card, OutlinedTextField), les layouts (Column, Row, Box, Spacer, Surface), les listes avec LazyColumn et LazyRow et des cartes réutilisables, et le thème Material 3 (couleurs, typo, formes, clair et sombre). J'ai aussi gardé ce que j'avais fait dans le premier devoir : des petits composables avec des paramètres, un `modifier` sur chacun, des callbacks pour les clics, l'accessibilité et les previews.

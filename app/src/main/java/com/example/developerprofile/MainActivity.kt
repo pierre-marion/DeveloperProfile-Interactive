@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -62,6 +63,9 @@ class MainActivity : ComponentActivity() {
                         onPortfolioClick = {
                             // Plus tard : ouvrir le portfolio
                         },
+                        onLinkClick = { link ->
+                            // Plus tard : ouvrir link.url dans le navigateur
+                        },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -80,12 +84,27 @@ data class ProjectUi(
     val year: String
 )
 
+data class ExperienceUi(
+    val id: Int,
+    val title: String,
+    val place: String,
+    val period: String,
+    val description: String
+)
+
+data class LinkUi(
+    val label: String,
+    val url: String
+)
+
 data class DeveloperProfileUi(
     val name: String,
     val role: String,
     val description: String,
     val skills: List<String>,
     val projects: List<ProjectUi>,
+    val experiences: List<ExperienceUi>,
+    val links: List<LinkUi>,
     val email: String,
     val location: String,
     val availability: String,
@@ -129,6 +148,27 @@ fun sampleProfile(): DeveloperProfileUi {
                 year = "2024"
             )
         ),
+        experiences = listOf(
+            ExperienceUi(
+                id = 1,
+                title = "Développeur Full-Stack (alternance)",
+                place = "CGI",
+                period = "Depuis 2024",
+                description = "Développement d'applications web avec Angular et C# / .NET."
+            ),
+            ExperienceUi(
+                id = 2,
+                title = "Mastère Architecture logicielle",
+                place = "ESGI – Paris",
+                period = "2025 – 2027",
+                description = "Architecture des applications, développement web et mobile."
+            )
+        ),
+        links = listOf(
+            LinkUi(label = "GitHub", url = "https://github.com/pierre-marion"),
+            LinkUi(label = "LinkedIn", url = "https://www.linkedin.com/in/pierre-marion"),
+            LinkUi(label = "Portfolio", url = "https://pierre-marion.dev")
+        ),
         email = "pierre.marion@example.com",
         location = "Paris, France",
         availability = "En alternance chez CGI",
@@ -163,6 +203,19 @@ fun sampleJuniorProfile(): DeveloperProfileUi {
                 year = "2025"
             )
         ),
+        experiences = listOf(
+            ExperienceUi(
+                id = 1,
+                title = "Bachelor Développement mobile",
+                place = "Lyon",
+                period = "2023 – 2026",
+                description = "Formation centrée sur Kotlin, Android et les interfaces mobiles."
+            )
+        ),
+        links = listOf(
+            LinkUi(label = "GitHub", url = "https://github.com/alex-martin"),
+            LinkUi(label = "LinkedIn", url = "https://www.linkedin.com/in/alex-martin")
+        ),
         email = "alex.martin@example.com",
         location = "Lyon, France",
         availability = "Disponible pour un stage",
@@ -177,6 +230,7 @@ fun ProfileScreen(
     profile: DeveloperProfileUi,
     onContactClick: () -> Unit,
     onPortfolioClick: () -> Unit,
+    onLinkClick: (LinkUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -187,11 +241,13 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            ProfileHeader(
+            ProfileHeaderCard(
                 name = profile.name,
                 role = profile.role,
                 isAvailable = profile.isAvailable,
-                modifier = Modifier.fillMaxWidth()
+                projectsCount = profile.projects.size,
+                skillsCount = profile.skills.size,
+                experiencesCount = profile.experiences.size
             )
         }
         item {
@@ -201,13 +257,28 @@ fun ProfileScreen(
             SkillsSection(skills = profile.skills)
         }
         item {
+            SectionTitle(title = "Parcours")
+        }
+        items(
+            items = profile.experiences,
+            key = { experience -> "experience-${experience.id}" }
+        ) { experience ->
+            ExperienceItem(experience = experience)
+        }
+        item {
             SectionTitle(title = "Projets")
         }
         items(
             items = profile.projects,
-            key = { project -> project.id }
+            key = { project -> "project-${project.id}" }
         ) { project ->
             ProjectCard(project = project)
+        }
+        item {
+            LinksSection(
+                links = profile.links,
+                onLinkClick = onLinkClick
+            )
         }
         item {
             ContactSection(
@@ -222,6 +293,95 @@ fun ProfileScreen(
 }
 
 /* ############### En-tête ################ */
+
+@Composable
+fun ProfileHeaderCard(
+    name: String,
+    role: String,
+    isAvailable: Boolean,
+    projectsCount: Int,
+    skillsCount: Int,
+    experiencesCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 3.dp
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            ProfileHeader(
+                name = name,
+                role = role,
+                isAvailable = isAvailable,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            ProfileStatsRow(
+                projectsCount = projectsCount,
+                skillsCount = skillsCount,
+                experiencesCount = experiencesCount
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfileStatsRow(
+    projectsCount: Int,
+    skillsCount: Int,
+    experiencesCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier = modifier.fillMaxWidth()) {
+        StatItem(
+            value = "$projectsCount",
+            label = "Projets",
+            modifier = Modifier.weight(1f)
+        )
+        StatItem(
+            value = "$skillsCount",
+            label = "Compétences",
+            modifier = Modifier.weight(1f)
+        )
+        StatItem(
+            value = "$experiencesCount",
+            label = "Expériences",
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun StatItem(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.secondary
+        )
+    }
+}
 
 @Composable
 fun ProfileHeader(
@@ -379,6 +539,54 @@ fun SkillChip(
     }
 }
 
+/* ############### Parcours ################ */
+
+@Composable
+fun ExperienceItem(
+    experience: ExperienceUi,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp
+        )
+    ) {
+        Row(modifier = Modifier.padding(16.dp)) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = experience.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${experience.place} • ${experience.period}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = experience.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
 /* ############### Projets ################ */
 
 @Composable
@@ -427,6 +635,72 @@ fun ProjectCard(
                 text = project.technologies,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/* ############### Liens ################ */
+
+@Composable
+fun LinksSection(
+    links: List<LinkUi>,
+    onLinkClick: (LinkUi) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        SectionTitle(title = "Liens")
+        Spacer(modifier = Modifier.height(8.dp))
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(links) { link ->
+                LinkChip(
+                    label = link.label,
+                    onClick = {
+                        onLinkClick(link)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LinkChip(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.extraLarge)
+            .clickable(
+                role = Role.Button,
+                onClickLabel = "Ouvrir $label",
+                onClick = onClick
+            )
+            .semantics {
+                contentDescription = "Ouvrir le lien $label"
+            },
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.primary,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = android.R.drawable.ic_menu_share),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge
             )
         }
     }
@@ -556,7 +830,8 @@ fun ProfileScreenLightPreview() {
         ProfileScreen(
             profile = sampleProfile(),
             onContactClick = {},
-            onPortfolioClick = {}
+            onPortfolioClick = {},
+            onLinkClick = {}
         )
     }
 }
@@ -571,7 +846,8 @@ fun ProfileScreenDarkPreview() {
         ProfileScreen(
             profile = sampleProfile(),
             onContactClick = {},
-            onPortfolioClick = {}
+            onPortfolioClick = {},
+            onLinkClick = {}
         )
     }
 }
@@ -586,7 +862,8 @@ fun JuniorProfilePreview() {
         ProfileScreen(
             profile = sampleJuniorProfile(),
             onContactClick = {},
-            onPortfolioClick = {}
+            onPortfolioClick = {},
+            onLinkClick = {}
         )
     }
 }
