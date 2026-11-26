@@ -1,21 +1,42 @@
-
 package com.example.developerprofile
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -34,6 +55,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
                     ProfileScreen(
+                        profile = sampleProfile(),
+                        onContactClick = {
+                            // Plus tard : ouvrir l'application mail
+                        },
+                        onPortfolioClick = {
+                            // Plus tard : ouvrir le portfolio
+                        },
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -42,97 +70,208 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun ProfileScreen(modifier: Modifier = Modifier) {
-    ProfileCard(
+/* ############### Données locales ################ */
+
+data class ProjectUi(
+    val id: Int,
+    val title: String,
+    val description: String,
+    val technologies: String,
+    val year: String
+)
+
+data class DeveloperProfileUi(
+    val name: String,
+    val role: String,
+    val description: String,
+    val skills: List<String>,
+    val projects: List<ProjectUi>,
+    val email: String,
+    val location: String,
+    val availability: String,
+    val isAvailable: Boolean
+)
+
+fun sampleProfile(): DeveloperProfileUi {
+    return DeveloperProfileUi(
         name = "Pierre Marion",
         role = "Développeur Full-Stack",
-        description = "Étudiant en Mastère architecture logiciel à l'ESGI. Passionné par le développement web, les interfaces modernes et les nouvelles technologies.",
+        description = "Étudiant en Mastère architecture logiciel à l'ESGI. " +
+                "Passionné par le développement web, les interfaces modernes et les nouvelles technologies.",
         skills = listOf(
             "Angular",
             "TypeScript",
             "C# / .NET",
             "Node.js",
-            "PostgreSQL"
+            "PostgreSQL",
+            "Jetpack Compose"
         ),
+        projects = listOf(
+            ProjectUi(
+                id = 1,
+                title = "Product Explorer",
+                description = "Application Android de catalogue produits avec listes modernes et thème Material 3.",
+                technologies = "Kotlin • Jetpack Compose • Material 3",
+                year = "2026"
+            ),
+            ProjectUi(
+                id = 2,
+                title = "Gestionnaire de tâches",
+                description = "Application web full-stack avec tableau de bord et suivi des tâches.",
+                technologies = "Angular • Node.js • PostgreSQL",
+                year = "2025"
+            ),
+            ProjectUi(
+                id = 3,
+                title = "API de réservation",
+                description = "API REST pour gérer la réservation de salles dans une entreprise.",
+                technologies = "C# / .NET • PostgreSQL",
+                year = "2024"
+            )
+        ),
+        email = "pierre.marion@example.com",
+        location = "Paris, France",
         availability = "En alternance chez CGI",
-        buttonText = "Voir mon portfolio",
-        onProfileClick = {
-
-        },
-        onActionClick = {
-
-        },
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp)
+        isAvailable = false
     )
 }
 
+fun sampleJuniorProfile(): DeveloperProfileUi {
+    return DeveloperProfileUi(
+        name = "Alex Martin",
+        role = "Développeur Android Junior",
+        description = "Développeur passionné par la création d'applications mobiles avec Kotlin et Jetpack Compose.",
+        skills = listOf(
+            "Kotlin",
+            "Jetpack Compose",
+            "Android Studio",
+            "Git"
+        ),
+        projects = listOf(
+            ProjectUi(
+                id = 1,
+                title = "Fiche Profil développeur",
+                description = "Premier écran Compose avec des composables réutilisables et des previews.",
+                technologies = "Kotlin • Jetpack Compose",
+                year = "2026"
+            ),
+            ProjectUi(
+                id = 2,
+                title = "Application météo",
+                description = "Maquette d'une application météo affichant des données locales.",
+                technologies = "Kotlin • Material 3",
+                year = "2025"
+            )
+        ),
+        email = "alex.martin@example.com",
+        location = "Lyon, France",
+        availability = "Disponible pour un stage",
+        isAvailable = true
+    )
+}
+
+/* ############### Écran principal ################ */
+
 @Composable
-fun ProfileCard(
-    name: String,
-    role: String,
-    description: String,
-    skills: List<String>,
-    availability: String,
-    buttonText: String,
-    onProfileClick: () -> Unit,
-    onActionClick: () -> Unit,
+fun ProfileScreen(
+    profile: DeveloperProfileUi,
+    onContactClick: () -> Unit,
+    onPortfolioClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    LazyColumn(
         modifier = modifier
-            .clickable(
-                role = Role.Button,
-                onClick = onProfileClick
-            )
-            .semantics {
-                contentDescription = "Consulter le profil de $name"
-            }
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
+        item {
             ProfileHeader(
-                name = name,
-                role = role,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            ProfileDescription(
-                description = description,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            SkillsSection(
-                skills = skills,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            ProfileAvailability(
-                availability = availability,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            ProfileAction(
-                buttonText = buttonText,
-                onActionClick = onActionClick,
+                name = profile.name,
+                role = profile.role,
+                isAvailable = profile.isAvailable,
                 modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            ProfileDescription(description = profile.description)
+        }
+    }
+}
+
+/* ############### En-tête ################ */
+
+@Composable
+fun ProfileHeader(
+    name: String,
+    role: String,
+    isAvailable: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ProfileAvatar(
+            name = name,
+            isAvailable = isAvailable
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = role,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.secondary
             )
         }
     }
 }
 
 @Composable
-fun ProfileHeader(
+fun ProfileAvatar(
     name: String,
-    role: String,
+    isAvailable: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        Text(text = name)
-        Text(text = role)
+    Box(modifier = modifier.size(96.dp)) {
+        Image(
+            painter = painterResource(id = android.R.drawable.ic_menu_gallery),
+            contentDescription = "Photo de profil de $name",
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(20.dp)
+        )
+        AvailabilityBadge(
+            isAvailable = isAvailable,
+            modifier = Modifier.align(Alignment.BottomEnd)
+        )
+    }
+}
+
+@Composable
+fun AvailabilityBadge(
+    isAvailable: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.small,
+        color = if (isAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
+        contentColor = if (isAvailable) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSecondary
+    ) {
+        Text(
+            text = if (isAvailable) "Dispo" else "En poste",
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium
+        )
     }
 }
 
@@ -141,103 +280,45 @@ fun ProfileDescription(
     description: String,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        Text(text = "À propos")
-        Text(
-            text = description,
-            modifier = Modifier.padding(top = 8.dp)
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
         )
-    }
-}
-
-@Composable
-fun SkillsSection(
-    skills: List<String>,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = "Compétences",
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        for (skill in skills) {
-            SkillItem(
-                skill = skill,
-                modifier = Modifier.padding(bottom = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "À propos",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
 }
 
-@Composable
-fun SkillItem(
-    skill: String,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = "• $skill",
-        modifier = modifier
-    )
-}
+/* ############### Previews ################ */
 
+@Preview(
+    showBackground = true,
+    name = "Profil - Thème clair"
+)
 @Composable
-fun ProfileAvailability(
-    availability: String,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier) {
-        Text(text = "Situation actuelle")
-        Text(
-            text = availability,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-    }
-}
-
-@Composable
-fun ProfileAction(
-    buttonText: String,
-    onActionClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Button(
-        onClick = onActionClick,
-        modifier = modifier
-    ) {
-        Text(text = buttonText)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DeveloperProfilePreview() {
-    DeveloperProfileTheme {
-        ProfileScreen()
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AndroidDeveloperPreview() {
-    DeveloperProfileTheme {
-        ProfileCard(
-            name = "Alex Martin",
-            role = "Développeur Android Junior",
-            description = "Développeur passionné par la création d'applications mobiles avec Kotlin et Jetpack Compose.",
-            skills = listOf(
-                "Kotlin",
-                "Jetpack Compose",
-                "Android Studio",
-                "Git"
-            ),
-            availability = "Disponible pour un stage",
-            buttonText = "Contacter",
-            onProfileClick = {},
-            onActionClick = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
+fun ProfileScreenLightPreview() {
+    DeveloperProfileTheme(darkTheme = false) {
+        ProfileScreen(
+            profile = sampleProfile(),
+            onContactClick = {},
+            onPortfolioClick = {}
         )
     }
 }
