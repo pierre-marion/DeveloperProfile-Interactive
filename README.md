@@ -39,6 +39,9 @@ Tout l'écran est une `LazyColumn` (`ProfileScreen`). Les blocs uniques (en-têt
 
 Les compétences sont dans une `LazyRow` (`SkillsSection`), qui défile horizontalement. Chaque compétence est affichée avec `SkillChip`.
 
+J'ai aussi ajouté une section « Parcours » : les expériences sont ajoutées avec `items` et affichées par `ExperienceItem`. Les liens pros (GitHub, LinkedIn, Portfolio) sont dans une deuxième `LazyRow`, avec un `LinkChip` cliquable (`Role.Button` + description pour l'accessibilité). En haut de l'écran, une `Row` avec `weight` affiche 3 chiffres clés (projets, compétences, expériences).
+
+
 ## Le thème
 
 J'ai choisi une couleur violette. Le thème est dans `Theme.kt` et `Type.kt` :
