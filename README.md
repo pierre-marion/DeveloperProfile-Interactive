@@ -12,7 +12,8 @@ L'écran affiche mon nom et mon rôle avec un avatar, une description, mes comp�
 
 ## Capture d'écran
 
-![Capture de l'application](screenshot.png)
+![Capture de l'application](Screenshot.png)
+![Capture de l'application](screenshootmodif.png)
 
 ## Composants utilisés
 
