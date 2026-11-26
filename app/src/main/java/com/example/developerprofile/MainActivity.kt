@@ -209,6 +209,15 @@ fun ProfileScreen(
         ) { project ->
             ProjectCard(project = project)
         }
+        item {
+            ContactSection(
+                email = profile.email,
+                location = profile.location,
+                availability = profile.availability,
+                onContactClick = onContactClick,
+                onPortfolioClick = onPortfolioClick
+            )
+        }
     }
 }
 
@@ -421,6 +430,118 @@ fun ProjectCard(
             )
         }
     }
+}
+
+/* ############### Contact ################ */
+
+@Composable
+fun ContactSection(
+    email: String,
+    location: String,
+    availability: String,
+    onContactClick: () -> Unit,
+    onPortfolioClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Contact",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = {},
+                readOnly = true,
+                label = {
+                    Text(text = "Email")
+                },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_dialog_email),
+                        contentDescription = null
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            ContactInfoRow(
+                iconRes = android.R.drawable.ic_menu_mylocation,
+                label = location
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            ContactInfoRow(
+                iconRes = android.R.drawable.ic_menu_my_calendar,
+                label = availability
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onContactClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Contacter")
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                PortfolioLink(onClick = onPortfolioClick)
+            }
+        }
+    }
+}
+
+@Composable
+fun ContactInfoRow(
+    iconRes: Int,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+fun PortfolioLink(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = "Voir le portfolio",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
+            .clickable(
+                role = Role.Button,
+                onClickLabel = "Ouvrir le portfolio",
+                onClick = onClick
+            )
+            .padding(8.dp)
+            .semantics {
+                contentDescription = "Voir le portfolio du développeur"
+            }
+    )
 }
 
 /* ############### Previews ################ */
