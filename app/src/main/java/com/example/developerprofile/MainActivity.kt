@@ -197,6 +197,9 @@ fun ProfileScreen(
         item {
             ProfileDescription(description = profile.description)
         }
+        item {
+            SkillsSection(skills = profile.skills)
+        }
     }
 }
 
@@ -303,6 +306,58 @@ fun ProfileDescription(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
+    }
+}
+
+@Composable
+fun SectionTitle(
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = title,
+        modifier = modifier,
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.primary
+    )
+}
+
+/* ############### Compétences ################ */
+
+@Composable
+fun SkillsSection(
+    skills: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        SectionTitle(title = "Compétences")
+        Spacer(modifier = Modifier.height(8.dp))
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(skills) { skill ->
+                SkillChip(label = skill)
+            }
+        }
+    }
+}
+
+@Composable
+fun SkillChip(
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge
+        )
     }
 }
 
