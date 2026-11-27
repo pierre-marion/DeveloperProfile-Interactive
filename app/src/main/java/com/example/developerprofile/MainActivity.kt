@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,21 +29,31 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.developerprofile.ui.theme.DeveloperProfileTheme
 
 class MainActivity : ComponentActivity() {
@@ -55,17 +66,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
-                    ProfileScreen(
-                        profile = sampleProfile(),
-                        onContactClick = {
-                            // Plus tard : ouvrir l'application mail
-                        },
-                        onPortfolioClick = {
-                            // Plus tard : ouvrir le portfolio
-                        },
-                        onLinkClick = { link ->
-                            // Plus tard : ouvrir link.url dans le navigateur
-                        },
+                    ProfileContainer(
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -146,6 +147,13 @@ fun sampleProfile(): DeveloperProfileUi {
                 description = "API REST pour gérer la réservation de salles dans une entreprise.",
                 technologies = "C# / .NET • PostgreSQL",
                 year = "2024"
+            ),
+            ProjectUi(
+                id = 4,
+                title = "Profil développeur",
+                description = "Portfolio Android interactif : recherche de projets, favoris et filtres.",
+                technologies = "Kotlin • Jetpack Compose • ViewModel • StateFlow",
+                year = "2026"
             )
         ),
         experiences = listOf(
@@ -223,11 +231,63 @@ fun sampleJuniorProfile(): DeveloperProfileUi {
     )
 }
 
-/* ############### Écran principal ################ */
+
+fun projectCountText(count: Int): String {
+    return when (count) {
+        0 -> "Aucun projet affiché"
+        1 -> "1 projet affiché"
+        else -> "$count projets affichés"
+    }
+}
+
+/* ############### Container ################ */
+
+
+@Composable
+fun ProfileContainer(
+    modifier: Modifier = Modifier,
+    viewModel: ProfileViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val uriHandler = LocalUriHandler.current
+
+    fun openUrl(url: String) {
+        // Pas d'application pour ouvrir le lien (ex. émulateur sans mail) : on ignore
+        runCatching { uriHandler.openUri(url) }
+    }
+
+    ProfileScreen(
+        profile = uiState.profile,
+        visibleProjects = uiState.visibleProjects,
+        searchQuery = uiState.searchQuery,
+        onSearchQueryChange = viewModel::onSearchQueryChange,
+        showOnlyFavorites = uiState.showOnlyFavorites,
+        onToggleFavoriteFilter = viewModel::onToggleFavoriteFilter,
+        favoriteProjectIds = uiState.favoriteProjectIds,
+        onFavoriteClick = viewModel::onFavoriteClick,
+        onContactClick = { openUrl("mailto:${uiState.profile.email}") },
+        onPortfolioClick = {
+            uiState.profile.links
+                .find { it.label == "Portfolio" }
+                ?.let { openUrl(it.url) }
+        },
+        onLinkClick = { link -> openUrl(link.url) },
+        modifier = modifier
+    )
+}
+
+/* ############### Écran principal (stateless) ################ */
 
 @Composable
 fun ProfileScreen(
     profile: DeveloperProfileUi,
+    visibleProjects: List<ProjectUi>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    showOnlyFavorites: Boolean,
+    onToggleFavoriteFilter: () -> Unit,
+    favoriteProjectIds: Set<Int>,
+    onFavoriteClick: (Int) -> Unit,
     onContactClick: () -> Unit,
     onPortfolioClick: () -> Unit,
     onLinkClick: (LinkUi) -> Unit,
@@ -247,7 +307,7 @@ fun ProfileScreen(
                 isAvailable = profile.isAvailable,
                 projectsCount = profile.projects.size,
                 skillsCount = profile.skills.size,
-                experiencesCount = profile.experiences.size
+                favoritesCount = favoriteProjectIds.size
             )
         }
         item {
@@ -268,11 +328,38 @@ fun ProfileScreen(
         item {
             SectionTitle(title = "Projets")
         }
+        item {
+            ProjectSearchField(
+                searchQuery = searchQuery,
+                onSearchQueryChange = onSearchQueryChange
+            )
+        }
+        item {
+            ProjectFilterRow(
+                visibleCount = visibleProjects.size,
+                showOnlyFavorites = showOnlyFavorites,
+                favoritesCount = favoriteProjectIds.size,
+                onToggleFavoriteFilter = onToggleFavoriteFilter
+            )
+        }
+        if (visibleProjects.isEmpty()) {
+            item {
+                EmptyProjectsMessage(
+                    searchQuery = searchQuery,
+                    showOnlyFavorites = showOnlyFavorites,
+                    hasFavorites = favoriteProjectIds.isNotEmpty()
+                )
+            }
+        }
         items(
-            items = profile.projects,
+            items = visibleProjects,
             key = { project -> "project-${project.id}" }
         ) { project ->
-            ProjectCard(project = project)
+            ProjectCard(
+                project = project,
+                isFavorite = project.id in favoriteProjectIds,
+                onFavoriteClick = { onFavoriteClick(project.id) }
+            )
         }
         item {
             LinksSection(
@@ -301,7 +388,7 @@ fun ProfileHeaderCard(
     isAvailable: Boolean,
     projectsCount: Int,
     skillsCount: Int,
-    experiencesCount: Int,
+    favoritesCount: Int,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -328,7 +415,7 @@ fun ProfileHeaderCard(
             ProfileStatsRow(
                 projectsCount = projectsCount,
                 skillsCount = skillsCount,
-                experiencesCount = experiencesCount
+                favoritesCount = favoritesCount
             )
         }
     }
@@ -338,7 +425,7 @@ fun ProfileHeaderCard(
 fun ProfileStatsRow(
     projectsCount: Int,
     skillsCount: Int,
-    experiencesCount: Int,
+    favoritesCount: Int,
     modifier: Modifier = Modifier
 ) {
     Row(modifier = modifier.fillMaxWidth()) {
@@ -353,8 +440,8 @@ fun ProfileStatsRow(
             modifier = Modifier.weight(1f)
         )
         StatItem(
-            value = "$experiencesCount",
-            label = "Expériences",
+            value = "$favoritesCount",
+            label = "Favoris",
             modifier = Modifier.weight(1f)
         )
     }
@@ -587,11 +674,109 @@ fun ExperienceItem(
     }
 }
 
-/* ############### Projets ################ */
+/* ############### Projets : recherche et filtre ################ */
+
+@Composable
+fun ProjectSearchField(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchQueryChange,
+        label = {
+            Text(text = "Rechercher un projet")
+        },
+        placeholder = {
+            Text(text = "Titre, technologie, année…")
+        },
+        leadingIcon = {
+            Icon(
+                painter = painterResource(id = android.R.drawable.ic_menu_search),
+                contentDescription = null
+            )
+        },
+        trailingIcon = if (searchQuery.isNotEmpty()) {
+            {
+                IconButton(onClick = { onSearchQueryChange("") }) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_close_clear_cancel),
+                        contentDescription = "Effacer la recherche"
+                    )
+                }
+            }
+        } else {
+            null
+        },
+        singleLine = true,
+        modifier = modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+fun ProjectFilterRow(
+    visibleCount: Int,
+    showOnlyFavorites: Boolean,
+    favoritesCount: Int,
+    onToggleFavoriteFilter: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = projectCountText(visibleCount),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.weight(1f)
+        )
+        if (showOnlyFavorites) {
+            Button(onClick = onToggleFavoriteFilter) {
+                Text(text = "Tous les projets")
+            }
+        } else {
+            OutlinedButton(onClick = onToggleFavoriteFilter) {
+                Text(text = "Favoris uniquement ($favoritesCount)")
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyProjectsMessage(
+    searchQuery: String,
+    showOnlyFavorites: Boolean,
+    hasFavorites: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val message = when {
+        showOnlyFavorites && !hasFavorites ->
+            "Aucun projet en favori pour l'instant. Touchez l'étoile d'un projet pour l'ajouter."
+        searchQuery.isNotBlank() ->
+            "Aucun projet ne correspond à « ${searchQuery.trim()} »."
+        else ->
+            "Aucun projet à afficher."
+    }
+
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.secondary,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    )
+}
+
+/* ############### Projets : carte ################ */
 
 @Composable
 fun ProjectCard(
     project: ProjectUi,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -602,7 +787,9 @@ fun ProjectCard(
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 3.dp
-        )
+        ),
+        // Bordure colorée : l'état favori se voit sur toute la carte
+        border = if (isFavorite) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -612,16 +799,21 @@ fun ProjectCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = project.title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = project.year,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = project.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = project.year,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                FavoriteButton(
+                    isFavorite = isFavorite,
+                    onClick = onFavoriteClick
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -637,6 +829,28 @@ fun ProjectCard(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+    }
+}
+
+@Composable
+fun FavoriteButton(
+    isFavorite: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(onClick = onClick, modifier = modifier) {
+        Icon(
+            painter = painterResource(
+                id = if (isFavorite) {
+                    android.R.drawable.btn_star_big_on
+                } else {
+                    android.R.drawable.btn_star_big_off
+                }
+            ),
+            contentDescription = if (isFavorite) "Retirer des favoris" else "Ajouter aux favoris",
+            // On garde les couleurs d'origine de l'étoile (jaune / grise)
+            tint = Color.Unspecified
+        )
     }
 }
 
@@ -706,7 +920,8 @@ fun LinkChip(
     }
 }
 
-/* ############### Contact ################ */
+/* ############### Contact (contient un état LOCAL) ################ */
+
 
 @Composable
 fun ContactSection(
@@ -715,8 +930,11 @@ fun ContactSection(
     availability: String,
     onContactClick: () -> Unit,
     onPortfolioClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initiallyExpanded: Boolean = false
 ) {
+    var showContactDetails by rememberSaveable { mutableStateOf(initiallyExpanded) }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -729,31 +947,50 @@ fun ContactSection(
                 style = MaterialTheme.typography.titleLarge
             )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = email,
-                onValueChange = {},
-                readOnly = true,
-                label = {
-                    Text(text = "Email")
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = android.R.drawable.ic_dialog_email),
-                        contentDescription = null
-                    )
-                },
+            OutlinedButton(
+                onClick = { showContactDetails = !showContactDetails },
                 modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            ContactInfoRow(
-                iconRes = android.R.drawable.ic_menu_mylocation,
-                label = location
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            ContactInfoRow(
-                iconRes = android.R.drawable.ic_menu_my_calendar,
-                label = availability
-            )
+            ) {
+                Text(
+                    text = if (showContactDetails) {
+                        "Masquer les informations de contact"
+                    } else {
+                        "Afficher les informations de contact"
+                    }
+                )
+            }
+
+            AnimatedVisibility(visible = showContactDetails) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = {
+                            Text(text = "Email")
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = android.R.drawable.ic_dialog_email),
+                                contentDescription = null
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ContactInfoRow(
+                        iconRes = android.R.drawable.ic_menu_mylocation,
+                        label = location
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ContactInfoRow(
+                        iconRes = android.R.drawable.ic_menu_my_calendar,
+                        label = availability
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -819,16 +1056,26 @@ fun PortfolioLink(
 }
 
 /* ############### Previews ################ */
+/* Les previews utilisent directement ProfileScreen (stateless), sans ViewModel. */
 
 @Preview(
     showBackground = true,
-    name = "Profil - Thème clair"
+    name = "1 - Recherche vide, aucun favori (clair)"
 )
 @Composable
-fun ProfileScreenLightPreview() {
+fun ProfileScreenDefaultPreview() {
+    val profile = sampleProfile()
+
     DeveloperProfileTheme(darkTheme = false) {
         ProfileScreen(
-            profile = sampleProfile(),
+            profile = profile,
+            visibleProjects = profile.projects,
+            searchQuery = "",
+            onSearchQueryChange = {},
+            showOnlyFavorites = false,
+            onToggleFavoriteFilter = {},
+            favoriteProjectIds = emptySet(),
+            onFavoriteClick = {},
             onContactClick = {},
             onPortfolioClick = {},
             onLinkClick = {}
@@ -838,13 +1085,29 @@ fun ProfileScreenLightPreview() {
 
 @Preview(
     showBackground = true,
-    name = "Profil - Thème sombre"
+    name = "2 - Recherche « kotlin » + favoris uniquement (sombre)"
 )
 @Composable
-fun ProfileScreenDarkPreview() {
+fun ProfileScreenSearchFavoritesPreview() {
+    val profile = sampleProfile()
+    val searchQuery = "kotlin"
+    val favoriteIds = setOf(1, 2, 4)
+
     DeveloperProfileTheme(darkTheme = true) {
         ProfileScreen(
-            profile = sampleProfile(),
+            profile = profile,
+            visibleProjects = filterProjects(
+                projects = profile.projects,
+                searchQuery = searchQuery,
+                showOnlyFavorites = true,
+                favoriteProjectIds = favoriteIds
+            ),
+            searchQuery = searchQuery,
+            onSearchQueryChange = {},
+            showOnlyFavorites = true,
+            onToggleFavoriteFilter = {},
+            favoriteProjectIds = favoriteIds,
+            onFavoriteClick = {},
             onContactClick = {},
             onPortfolioClick = {},
             onLinkClick = {}
@@ -854,16 +1117,70 @@ fun ProfileScreenDarkPreview() {
 
 @Preview(
     showBackground = true,
-    name = "Profil junior disponible - Thème clair"
+    name = "3 - Recherche sans résultat (clair)"
+)
+@Composable
+fun ProfileScreenNoResultPreview() {
+    val profile = sampleProfile()
+
+    DeveloperProfileTheme(darkTheme = false) {
+        ProfileScreen(
+            profile = profile,
+            visibleProjects = emptyList(),
+            searchQuery = "python",
+            onSearchQueryChange = {},
+            showOnlyFavorites = false,
+            onToggleFavoriteFilter = {},
+            favoriteProjectIds = setOf(1),
+            onFavoriteClick = {},
+            onContactClick = {},
+            onPortfolioClick = {},
+            onLinkClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4 - Profil junior disponible (clair)"
 )
 @Composable
 fun JuniorProfilePreview() {
+    val profile = sampleJuniorProfile()
+
     DeveloperProfileTheme(darkTheme = false) {
         ProfileScreen(
-            profile = sampleJuniorProfile(),
+            profile = profile,
+            visibleProjects = profile.projects,
+            searchQuery = "",
+            onSearchQueryChange = {},
+            showOnlyFavorites = false,
+            onToggleFavoriteFilter = {},
+            favoriteProjectIds = setOf(2),
+            onFavoriteClick = {},
             onContactClick = {},
             onPortfolioClick = {},
             onLinkClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5 - Section contact ouverte (état local)"
+)
+@Composable
+fun ContactSectionExpandedPreview() {
+    val profile = sampleProfile()
+
+    DeveloperProfileTheme {
+        ContactSection(
+            email = profile.email,
+            location = profile.location,
+            availability = profile.availability,
+            onContactClick = {},
+            onPortfolioClick = {},
+            initiallyExpanded = true
         )
     }
 }
